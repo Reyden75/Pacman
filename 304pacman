@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+
+import sys
+import re
+import numpy
+
+def FindF(Map):
+    for x in range(len(Map)):
+        for y in range(len(Map[x])):
+            if (Map[x][y]) == 'F':
+                return (x, y)
+    return (-1, -1)
+
+def FindP(Map):
+    for x in range(len(Map)):
+        for y in range(len(Map[x])):
+            if (Map[x][y]) == 'P':
+                return (x, y)
+    return (-1, -1)
+
+def checkCase(tmp, x, y, z, PacBoard):
+    if x < 0 or y < 0 or x >= len(PacBoard[y]) or y >= len(PacBoard):
+        return False
+    if PacBoard[y][x] == -2:
+        return True
+    if PacBoard[y][x] != 0:
+        return False
+    PacBoard[y][x] = z + 1
+    tmp.append((x, y, z + 1))
+
+def StartSearch(F, P, c1, c2, PacBoard):
+    save = [F]
+    Path = False
+    while len(save) > 0:
+        tmp = []
+        for P in save:
+            if checkCase(tmp, P[0], P[1] - 1, P[2], PacBoard) or checkCase(tmp, P[0] + 1, P[1], P[2], PacBoard) or checkCase(tmp, P[0], P[1] + 1, P[2], PacBoard) or checkCase(tmp, P[0] - 1, P[1], P[2], PacBoard):
+                Path = True
+                tmp = []
+                break;
+        save = tmp
+    printMap(PacBoard, c1, c2)
+
+def ShortestPath(Map, c1, c2):
+    PacBoard = numpy.zeros((len(Map), len(Map)), int, order='C')
+    PacBoard.fill(0)
+    F = FindF(Map)
+    P = FindP(Map)
+    if ((F[0] == -1 and F[1] == -1) or (P[0] == -1 and P[1] == -1)):
+        raise Exception("F or P doesn't exist.\n");
+    for i in range(len(Map)):
+        for j in range(len(Map[i])):
+            if Map[i][j] == '1':
+                PacBoard[i][j] = -1
+            if Map[i][j] == 'P':
+                PacBoard[i][j] = -2
+            if Map[i][j] == 'F':
+                PacBoard[i][j] = -3
+    StartSearch((F[1], F[0], 0), (P[1], P[0]), c1, c2, PacBoard)
+
+def parseFile(file):
+    with open(file) as f:
+        content = f.readlines()
+    content = [x.strip() for x in content]
+    return (content)
+
+def printMap(map, c1, c2):
+    for i in range(len(map)):
+        for j in range(len(map[i])):
+            if (map[i][j] == 0):
+                print(c2, end='')
+            if (map[i][j] == -1):
+                print(c1, end='')
+            if (map[i][j] == -2):
+                print('P', end='')
+            if (map[i][j] == -3):
+                print('F', end='')
+            elif map[i][j] > 0:
+                print(map[i][j] % 10, end='')
+        print("")
+
+def parseMap(List):
+    Pacman = 0
+    Phantom = 0
+    for i in range(len(List)):
+        for j in range(len(List[i])):
+            if (List[i][j] == 'P'):
+                Pacman += 1
+            if (List[i][j] == 'F'):
+                Phantom += 1
+            if (List[i][j] != '1' and List[i][j] != '0' and List[i][j] != 'P' and List[i][j] != 'F'):
+                raise Exception("Map contains wrong characters\n")
+    if (Phantom > 1 or Pacman > 1):
+        raise Exception("Can't be more than 1 phantom and 1 pacman.\n")
+    return (True)
+    
+def helpUsage():
+    print("    file    file describing the board, using the following characters:")
+    print("                '0' for an empty square,")
+    print("                '1' for a wall,")
+    print("                'F' for the ghost's position,")
+    print("                'P' for Pacman's position.")
+    print("    c1      character to display for the wall")
+    print("    c2      character to display for an empty space.")
+
+try:
+    arguments = sys.argv
+    if len(arguments) == 2 and arguments[1] == "-h":
+        helpUsage()
+        exit(0)
+    if (len(arguments) == 2 or (len(arguments) == 4)):
+        if len(arguments) == 2:
+            c1 = '0' #wall
+            c2 = '1' #empty space
+        if len(arguments) == 4:
+            if len(arguments[2]) != 1 or len(arguments[3]) != 1:
+                raise Exception("c1 or c2 must be a character\n")
+            if arguments[2][0] == arguments[3][0]:
+                raise Exception("c1 and c2 can't be the same\n")
+            c1 = arguments[2][0] #wall
+            c2 = arguments[3][0] #empty space
+        List = parseFile(arguments[1])
+        if (parseMap(List)):
+            ShortestPath(List, c1, c2)
+    else:
+        raise Exception("Invalid number of arguments!\n")
+except Exception as error:
+    sys.stdout.write(str(error))
+    exit(84)
